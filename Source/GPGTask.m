@@ -413,10 +413,18 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 	isRunning = YES;
 	
     // Default arguments which every call to GPG needs.
+    NSPipe *statusPipe = [[NSPipe alloc] init];
+    NSPipe *attribPipe = [[NSPipe alloc] init];
+    NSPipe *stdinPipe = [[NSPipe alloc] init];
+    NSPipe *stdoutPipe = [[NSPipe alloc] init];
+    NSPipe *stderrPipe = [[NSPipe alloc] init];
+    const int statusFd = 3;
+    const int attribFd = 4;
 	
     NSMutableArray *defaultArguments = [NSMutableArray arrayWithObjects:
                                         @"--no-greeting", @"--no-tty", @"--with-colons", @"--fixed-list-mode",
-                                        @"--yes", @"--output", @"-", @"--status-fd", @"3", nil];
+                                        @"--yes", @"--output", @"-", 
+                                        @"--status-fd", [[NSNumber numberWithInt:statusFd] stringValue], nil];
 	
 	
 	if (progressInfo && [delegate respondsToSelector:@selector(gpgTask:progressed:total:)]) {
@@ -437,7 +445,7 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 	
     // If the attribute data is required, add the attribute-fd.
     if (getAttributeData)
-        [defaultArguments addObjectsFromArray:[NSArray arrayWithObjects:@"--attribute-fd", @"4", nil]];
+        [defaultArguments addObjectsFromArray:[NSArray arrayWithObjects:@"--attribute-fd", [[NSNumber numberWithInt:attribFd] stringValue], nil]];
  
 	// TODO: Optimize and make more generic.
     //Für Funktionen wie --decrypt oder --verify muss "--no-armor" nicht gesetzt sein.
@@ -466,9 +474,15 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 	
 	
     // Last but not least, add the fd's used to read the in-data from.
-    int i = 5;
+    NSMutableArray *pipeList = [[NSMutableArray alloc] initWithCapacity:[inDatas count]];
+    const int kFirstInputFd = 5;
+    int k = kFirstInputFd;
     for (NSData *data in inDatas) {
-        [defaultArguments addObject:[NSString stringWithFormat:@"/dev/fd/%d", i++]];
+        NSPipe *inPipe = [[NSPipe alloc] init];
+        [pipeList addObject:inPipe];
+        int writeFd = k++;
+        [defaultArguments addObject:[NSString stringWithFormat:@"/dev/fd/%d", writeFd]];
+        [inPipe release];
     }
 		
     
@@ -484,29 +498,32 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
     // Last before launching, create the inPipes and add the fd nums to the arguments.
     gpgTask = [[LPXTTask alloc] init];
     gpgTask.launchPath = self.gpgPath;
-    gpgTask.standardInput = [NSPipe pipe];
-    gpgTask.standardOutput = [NSPipe pipe];
-    gpgTask.standardError = [NSPipe pipe];
+    gpgTask.standardInput = stdinPipe;
+    gpgTask.standardOutput = stdoutPipe;
+    gpgTask.standardError = stderrPipe;
     gpgTask.arguments = defaultArguments;
     
 	GPGDebugLog(@"gpg %@", [gpgTask.arguments componentsJoinedByString:@" "]);
     
     // Now setup all the pipes required to communicate with gpg.
-    [gpgTask inheritPipe:[NSPipe pipe] mode:O_RDONLY dup:3 name:@"status"];
-    [gpgTask inheritPipe:[NSPipe pipe] mode:O_RDONLY dup:4 name:@"attribute"];
-    NSMutableArray *pipeList = [[NSMutableArray alloc] init];
+    [gpgTask inheritPipe:statusPipe mode:O_RDONLY dup:statusFd name:@"status"];
+    [gpgTask inheritPipe:attribPipe mode:O_RDONLY dup:attribFd name:@"attribute"];
     NSMutableArray *dupList = [[NSMutableArray alloc] init];
-    i = 5;
-    for (NSData *data in inDatas) {
-        [pipeList addObject:[NSPipe pipe]];
-        [dupList addObject:[NSNumber numberWithInt:i++]];
+    k = kFirstInputFd;
+    for (NSPipe *inPipe in pipeList) {
+        // dup2 the fileHandleForReading to fileHandleForWriting, implicitly closing the latter 
+        [dupList addObject:[NSNumber numberWithInt:k++]];
     }
     [gpgTask inheritPipes:pipeList mode:O_WRONLY dups:dupList name:@"ins"];
     [pipeList release];
     [dupList release];
+    [statusPipe release];
+    [attribPipe release];
+    [stdinPipe release];
+    [stdoutPipe release];
+    [stderrPipe release];
     // Setup the task to be run in the parent process, before
     // the parent starts waiting for the child.
-    NSMutableData *completeStatusData = [[NSMutableData alloc] initWithLength:0];
     
     
 	__block NSException *blockException = nil;
@@ -534,11 +551,9 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
         // Add each job to the collector group.
         dispatch_group_async(collectorGroup, queue, ^{
             self.outData = [[[gpgTask inheritedPipeWithName:@"stdout"] fileHandleForReading] readDataToEndOfFile];
-			[self logDataContent:outData message:@"[STDOUT]"];
         });
         dispatch_group_async(collectorGroup, queue, ^{
             self.errData = [[[gpgTask inheritedPipeWithName:@"stderr"] fileHandleForReading] readDataToEndOfFile];
-			[self logDataContent:errData message:@"[STDERR]"];
         });
         if(getAttributeData) {
             dispatch_group_async(collectorGroup, queue, ^{
@@ -548,6 +563,7 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 				
         // Handle the status data. This is an important one.
         dispatch_group_async(collectorGroup, queue, ^{
+            NSMutableData *completeStatusData = [NSMutableData data];
 			NSMutableString *line = [[NSMutableString alloc] init];
 			@try {
 				NSPipe *statusPipe = [gpgTask inheritedPipeWithName:@"status"];
@@ -607,6 +623,8 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
         dispatch_release(collectorGroup);
         
 		[self logDataContent:statusData message:@"[STATUS]"];
+        [self logDataContent:outData message:@"[STDOUT]"];
+        [self logDataContent:errData message:@"[STDERR]"];
     };
         
     // AAAAAAAAND NOW! Let's run the task and wait for it to complete.
@@ -614,6 +632,7 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 	
     
 	if (blockException) {
+        [gpgTask release];
 		@throw [blockException autorelease];
 	}
 	
@@ -632,7 +651,6 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
     
     isRunning = NO;
     
-    [completeStatusData release];
     return exitcode;
 }
 

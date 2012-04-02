@@ -39,7 +39,6 @@ typedef void (^lpxt_task_t)(void);
 	BOOL _cancelled;
 
 @private
-    CFMutableArrayRef _inheritedPipes;
     NSMutableDictionary *_inheritedPipesMap;
 	
 }
