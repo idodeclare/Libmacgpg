@@ -69,9 +69,9 @@
 	pid_t childPID;
 	BOOL cancelled;
 	BOOL isRunning;
-	
-	dispatch_group_t collectorGroup;
-	dispatch_queue_t queue;
+
+	// I don't own, just a reference saved from GPGTaskOperation
+	NSOperationQueue *queue;
 	NSInteger inDataLength;
 	NSInteger progressedLength;
 	NSMutableDictionary *progressedLengths;
@@ -135,5 +135,12 @@
 
 - (void)processStatusLine:(NSString *)line;
 - (void)logDataContent:(NSData *)data message:(NSString *)message;
+
+// Used by GPGTaskOperation
+- (void)_writeInputData:(id)arg;
+- (void)_readStdout:(id)arg;
+- (void)_readStderr:(id)arg;
+- (void)_readAttributes:(id)arg;
+- (void)_handleStatus:(id)arg;
 
 @end

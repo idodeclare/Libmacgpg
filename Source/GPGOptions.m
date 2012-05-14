@@ -39,6 +39,8 @@
 
 @implementation GPGOptions
 
+static GPGOptions *_sharedInstance = nil;
+
 NSString *environmentPlistPath;
 NSString *environmentPlistDir;
 NSString *commonDefaultsDomain = @"org.gpgtools.common";
@@ -382,8 +384,9 @@ uint8 debugLog;
 }
 
 - (NSArray *)keyservers { // Returns a list of possible keyservers.
-    NSURL *keyserversPlistURL = [[NSBundle bundleForClass:[self class]] URLForResource:@"Keyservers" withExtension:@"plist"];
-    NSMutableSet *keyservers = [NSMutableSet setWithArray:[NSArray arrayWithContentsOfURL:keyserversPlistURL]];
+    NSString *keyserversPlistPath = [[NSBundle bundleForClass:[self class]] 
+                                     pathForResource:@"Keyservers" ofType:@"plist"];
+    NSMutableSet *keyservers = [NSMutableSet setWithArray:[NSArray arrayWithContentsOfFile:keyserversPlistPath]];
 	
 	NSArray *servers = [[GPGOptions sharedOptions] valueForKey:@"keyservers" inDomain:GPGDomain_common];
 	if ([servers isKindOfClass:[NSArray class]]) {
@@ -638,16 +641,12 @@ void SystemConfigurationDidChange(SCPreferencesRef prefs, SCPreferencesNotificat
 				  commonKeys, [NSNumber numberWithInt:GPGDomain_common],
 				  specialKeys, [NSNumber numberWithInt:GPGDomain_special],				  
 				  nil];
+
+    if (!_sharedInstance)
+        _sharedInstance = [[GPGOptions alloc] init];
 }
 
 + (id)sharedOptions {
-    static dispatch_once_t onceToken;
-    static GPGOptions *_sharedInstance = nil;
-    
-    dispatch_once(&onceToken, ^{
-        _sharedInstance = [[GPGOptions alloc] init];
-    });
-    
     return _sharedInstance;
 }
 - (id)init {

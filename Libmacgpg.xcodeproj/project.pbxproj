@@ -77,6 +77,8 @@
 		45891A3E151BA1C9002D7410 /* SignedInputStringCRLF.txt in Resources */ = {isa = PBXBuildFile; fileRef = 45891A3C151BA1C9002D7410 /* SignedInputStringCRLF.txt */; };
 		45891A3F151BA1C9002D7410 /* SignedInputStringLF.txt in Resources */ = {isa = PBXBuildFile; fileRef = 45891A3D151BA1C9002D7410 /* SignedInputStringLF.txt */; };
 		45891A41151BA1EC002D7410 /* SignedInputStringCR.txt in Resources */ = {isa = PBXBuildFile; fileRef = 45891A40151BA1EC002D7410 /* SignedInputStringCR.txt */; };
+		458D9BE61560827800DF0021 /* GPGTaskOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 458D9BE41560827800DF0021 /* GPGTaskOperation.h */; };
+		458D9BE71560827800DF0021 /* GPGTaskOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 458D9BE51560827800DF0021 /* GPGTaskOperation.m */; };
 		4591C4CA14F85AA3007F6D47 /* GPGConfReaderTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 4591C4C914F85AA3007F6D47 /* GPGConfReaderTest.m */; };
 		45B9A7F6151C9A6D00DAD67A /* OpenPGP.asc in Resources */ = {isa = PBXBuildFile; fileRef = 45B9A7F5151C9A6D00DAD67A /* OpenPGP.asc */; };
 		45C0BC03151B65C700AA8BF6 /* GPGTestVerify.m in Sources */ = {isa = PBXBuildFile; fileRef = 45C0BC02151B65C700AA8BF6 /* GPGTestVerify.m */; };
@@ -187,6 +189,8 @@
 		45891A3C151BA1C9002D7410 /* SignedInputStringCRLF.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SignedInputStringCRLF.txt; sourceTree = "<group>"; };
 		45891A3D151BA1C9002D7410 /* SignedInputStringLF.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SignedInputStringLF.txt; sourceTree = "<group>"; };
 		45891A40151BA1EC002D7410 /* SignedInputStringCR.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SignedInputStringCR.txt; sourceTree = "<group>"; };
+		458D9BE41560827800DF0021 /* GPGTaskOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPGTaskOperation.h; sourceTree = "<group>"; };
+		458D9BE51560827800DF0021 /* GPGTaskOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPGTaskOperation.m; sourceTree = "<group>"; };
 		4591C4C914F85AA3007F6D47 /* GPGConfReaderTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = GPGConfReaderTest.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		4591C4D314F86D38007F6D47 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		4591C4D414F86D38007F6D47 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
@@ -283,6 +287,8 @@
 				309A20FA13587D5B0041E0AA /* GPGPacket.m */,
 				30FF413112FAC6CD00F39832 /* GPGTask.h */,
 				30FF413212FAC6CD00F39832 /* GPGTask.m */,
+				458D9BE41560827800DF0021 /* GPGTaskOperation.h */,
+				458D9BE51560827800DF0021 /* GPGTaskOperation.m */,
 				30FF413312FAC6CD00F39832 /* GPGTaskOrder.h */,
 				30FF413412FAC6CD00F39832 /* GPGTaskOrder.m */,
 				309A18CE13E3812E0069DC0F /* GPGTransformer.h */,
@@ -440,6 +446,7 @@
 				45156A1C14FB1B1200129FE7 /* GPGLinesSetting.h in Headers */,
 				45156A2014FB1D7D00129FE7 /* GPGDictSetting.h in Headers */,
 				45156A2A14FB3EF700129FE7 /* GPGArraySetting.h in Headers */,
+				458D9BE61560827800DF0021 /* GPGTaskOperation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,6 +627,7 @@
 				45156A1D14FB1B1200129FE7 /* GPGLinesSetting.m in Sources */,
 				45156A2114FB1D7D00129FE7 /* GPGDictSetting.m in Sources */,
 				45156A2B14FB3EF700129FE7 /* GPGArraySetting.m in Sources */,
+				458D9BE71560827800DF0021 /* GPGTaskOperation.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -739,7 +747,7 @@
 					SenTestingKit,
 				);
 				PRODUCT_NAME = UnitTest;
-				TEST_AFTER_BUILD = YES;
+				SDKROOT = macosx10.6;
 				WRAPPER_EXTENSION = octest;
 			};
 			name = Debug;
@@ -764,7 +772,7 @@
 					SenTestingKit,
 				);
 				PRODUCT_NAME = UnitTest;
-				TEST_AFTER_BUILD = YES;
+				SDKROOT = macosx10.6;
 				WRAPPER_EXTENSION = octest;
 				ZERO_LINK = NO;
 			};

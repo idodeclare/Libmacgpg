@@ -21,6 +21,7 @@
 #import "GPGGlobals.h"
 #import "GPGOptions.h"
 #import "LPXTTask.h"
+#import "GPGTaskOperation.h"
 #import "GPGException.h"
 #import "GPGGlobals.h"
 //#import <sys/shm.h>
@@ -35,7 +36,6 @@
 
 + (void)initializeStatusCodes;
 - (NSString *)getPassphraseFromPinentry;
-- (void)_writeInputData;
 - (void)unsetErrorCode:(int)value;
 
 @end
@@ -394,7 +394,7 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 	self.lastNeedPassphrase = nil;
 	
 	self.gpgPath = nil;
-	
+	[queue release];
 	[super dealloc];
 }
 
@@ -506,113 +506,16 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
     [dupList release];
     // Setup the task to be run in the parent process, before
     // the parent starts waiting for the child.
-    NSMutableData *completeStatusData = [[NSMutableData alloc] initWithLength:0];
     
-    
-	__block NSException *blockException = nil;
-
-    gpgTask.parentTask = ^{
-        // Setup the dispatch queue.
-        /*dispatch_queue_t*/ queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-        // Create the group which will hold all the jobs which should finish before
-        // the parent process starts waiting for the child.
-       /* dispatch_group_t*/ collectorGroup = dispatch_group_create();
-        // The data is written to the pipe as soon as gpg issues the status
-        // BEGIN_ENCRYPTION or BEGIN_SIGNING. See processStatus.
-        // When we want to encrypt or sign, the data can't be written before the 
-		// BEGIN_ENCRYPTION or BEGIN_SIGNING status was issued, BUT
-        // in every other case, gpg stalls till it received the data to decrypt.
-        // So in that case, the data actually has to be written as the very first thing.
-		
-		NSArray *options = [NSArray arrayWithObjects:@"--encrypt", @"--sign", @"--clearsign", @"--detach-sign", @"--symmetric", @"-e", @"-s", @"-b", @"-c", nil];
-		
-        if([gpgTask.arguments firstObjectCommonWithArray:options] == nil) {
-            dispatch_group_async(collectorGroup, queue, ^{
-                [self _writeInputData];
-            });
-        }
-        // Add each job to the collector group.
-        dispatch_group_async(collectorGroup, queue, ^{
-            self.outData = [[[gpgTask inheritedPipeWithName:@"stdout"] fileHandleForReading] readDataToEndOfFile];
-			[self logDataContent:outData message:@"[STDOUT]"];
-        });
-        dispatch_group_async(collectorGroup, queue, ^{
-            self.errData = [[[gpgTask inheritedPipeWithName:@"stderr"] fileHandleForReading] readDataToEndOfFile];
-			[self logDataContent:errData message:@"[STDERR]"];
-        });
-        if(getAttributeData) {
-            dispatch_group_async(collectorGroup, queue, ^{
-                self.attributeData = [[[gpgTask inheritedPipeWithName:@"attribute"] fileHandleForReading] readDataToEndOfFile];
-            });
-        }
-				
-        // Handle the status data. This is an important one.
-        dispatch_group_async(collectorGroup, queue, ^{
-			NSMutableString *line = [[NSMutableString alloc] init];
-			@try {
-				NSPipe *statusPipe = [gpgTask inheritedPipeWithName:@"status"];
-				NSFileHandle *statusPipeReadingFH = [statusPipe fileHandleForReading];
-				NSData *currentData;
-				NSString *linePart;
-				NSArray *tmpLines;
-				while((currentData = [statusPipeReadingFH availableData]) && [currentData length]) {
-					// Add the received data for later use.
-					[completeStatusData appendData:currentData];
-					// Convert the data to a string, to better work with it.
-					linePart = [[NSString alloc] initWithData:currentData encoding:NSUTF8StringEncoding];
-					// Line part might acutally be already multiple lines, in that case, well...
-					// the fucker is split up and processKeyword:value: called for each line.
-					tmpLines = [linePart componentsSeparatedByString:@"\n"];
-					[linePart release];
-					int i = 0;
-					for(id tmpLine in tmpLines) {
-						// If multiple lines are found, the last line will be used,
-						// to restart a new line.
-						if(i == 0)
-							tmpLine = [line stringByAppendingString:tmpLine]; 
-						if(i == [tmpLines count] - 1) {
-							[line setString:[tmpLines objectAtIndex:[tmpLines count]-1]];
-							break;
-						}
-						[self processStatusLine:tmpLine];
-						i++;
-					}
-					// Unfortunately we never know if enough data has come in yet to parse.
-					// So, until a \n character is found, we're appending the data.
-					//[line appendString:linePart];
-					if(((NSRange)[line rangeOfString:@"\n"]).location == NSNotFound)
-						continue;
-					[line replaceCharactersInRange:[line rangeOfString:@"\n"] withString:@""];
-					// Skip the lines that don't begin with [GNUPG:].
-					if(((NSRange)[line rangeOfString:GPG_STATUS_PREFIX]).location == NSNotFound)
-						continue;
-					// Parse the keyword and value, and process.
-					[self processStatusLine:line];
-					// Reset line.
-					[line setString:@""];
-				}
-
-			} @catch (NSException *exception) {
-				blockException = [exception retain];
-				[gpgTask cancel];
-			} @finally {
-				self.statusData = completeStatusData;
-				[line release];
-			}
-        });
-        
-        // Wait for the jobs to finish.
-        dispatch_group_wait(collectorGroup, DISPATCH_TIME_FOREVER);
-        // And release the dispatch queue.
-        dispatch_release(collectorGroup);
-        
-		[self logDataContent:statusData message:@"[STATUS]"];
-    };
+    GPGTaskOperation *subop = [GPGTaskOperation taskFor:self lpxtTask:gpgTask];
+    gpgTask.parentTask = subop;
+    [queue release];
+    queue = [subop.queue retain];
         
     // AAAAAAAAND NOW! Let's run the task and wait for it to complete.
     [gpgTask launchAndWait];
-	
-    
+
+	NSException *blockException = subop.operationException;
 	if (blockException) {
 		@throw [blockException autorelease];
 	}
@@ -632,11 +535,10 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
     
     isRunning = NO;
     
-    [completeStatusData release];
     return exitcode;
 }
 
-- (void)_writeInputData {
+- (void)_writeInputData:(id)arg {
 	if (inputDataWritten) return;
 	inputDataWritten = YES;
     NSArray *pipeList = [gpgTask inheritedPipesWithName:@"ins"];
@@ -645,6 +547,78 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
         [[[pipeList objectAtIndex:i] fileHandleForWriting] closeFile];
     }
 }
+
+- (void)_readStdout:(id)arg {
+    self.outData = [[[gpgTask inheritedPipeWithName:@"stdout"] fileHandleForReading] readDataToEndOfFile];
+    [self logDataContent:outData message:@"[STDOUT]"];    
+}
+
+- (void)_readStderr:(id)arg {
+    self.errData = [[[gpgTask inheritedPipeWithName:@"stderr"] fileHandleForReading] readDataToEndOfFile];
+    [self logDataContent:errData message:@"[STDERR]"];
+}
+
+- (void)_readAttributes:(id)arg {
+    self.attributeData = [[[gpgTask inheritedPipeWithName:@"attribute"] fileHandleForReading] readDataToEndOfFile];
+}
+
+- (void)_handleStatus:(id)arg {
+    NSMutableArray *exContainer = arg;
+    NSMutableData *completeStatusData = [NSMutableData data];
+    NSMutableString *line = [[NSMutableString alloc] init];
+    @try {
+        NSPipe *statusPipe = [gpgTask inheritedPipeWithName:@"status"];
+        NSFileHandle *statusPipeReadingFH = [statusPipe fileHandleForReading];
+        NSData *currentData;
+        NSString *linePart;
+        NSArray *tmpLines;
+        while((currentData = [statusPipeReadingFH availableData]) && [currentData length]) {
+            // Add the received data for later use.
+            [completeStatusData appendData:currentData];
+            // Convert the data to a string, to better work with it.
+            linePart = [[NSString alloc] initWithData:currentData encoding:NSUTF8StringEncoding];
+            // Line part might acutally be already multiple lines, in that case, well...
+            // the fucker is split up and processKeyword:value: called for each line.
+            tmpLines = [linePart componentsSeparatedByString:@"\n"];
+            [linePart release];
+            int i = 0;
+            for(id tmpLine in tmpLines) {
+                // If multiple lines are found, the last line will be used,
+                // to restart a new line.
+                if(i == 0)
+                    tmpLine = [line stringByAppendingString:tmpLine]; 
+                if(i == [tmpLines count] - 1) {
+                    [line setString:[tmpLines objectAtIndex:[tmpLines count]-1]];
+                    break;
+                }
+                [self processStatusLine:tmpLine];
+                i++;
+            }
+            // Unfortunately we never know if enough data has come in yet to parse.
+            // So, until a \n character is found, we're appending the data.
+            //[line appendString:linePart];
+            if(((NSRange)[line rangeOfString:@"\n"]).location == NSNotFound)
+                continue;
+            [line replaceCharactersInRange:[line rangeOfString:@"\n"] withString:@""];
+            // Skip the lines that don't begin with [GNUPG:].
+            if(((NSRange)[line rangeOfString:GPG_STATUS_PREFIX]).location == NSNotFound)
+                continue;
+            // Parse the keyword and value, and process.
+            [self processStatusLine:line];
+            // Reset line.
+            [line setString:@""];
+        }
+        
+    } @catch (NSException *exception) {
+        [exContainer addObject:exception];
+        [gpgTask cancel];
+    } @finally {
+        self.statusData = completeStatusData;
+        [self logDataContent:statusData message:@"[STATUS]"];
+        [line release];
+    }    
+}
+
 - (void)processStatusLine:(NSString *)line {
     NSString *keyword, *value;
 	
@@ -717,9 +691,8 @@ static NSString *GPG_STATUS_PREFIX = @"[GNUPG:] ";
 			break;
         case GPG_STATUS_BEGIN_ENCRYPTION:
         case GPG_STATUS_BEGIN_SIGNING:
-            dispatch_group_async(collectorGroup, queue, ^{
-                [self _writeInputData];
-            });
+            [queue addOperation:[[[NSInvocationOperation alloc] 
+                                  initWithTarget:self selector:@selector(_writeInputData:) object:nil] autorelease]];
             break;
 		case GPG_STATUS_DECRYPTION_OKAY:
 			[self unsetErrorCode:GPGErrorNoSecretKey];

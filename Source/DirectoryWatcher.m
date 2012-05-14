@@ -108,7 +108,13 @@ void eventStreamCallBack(ConstFSEventStreamRef streamRef, void *clientCallBackIn
 	}
 	if (self.delegate && [self.pathsToWatch count] > 0) {
 		FSEventStreamContext context = {0, self, nil, nil, nil};
-		eventStream = FSEventStreamCreate(nil, &eventStreamCallBack, &context, (CFArrayRef)[self.pathsToWatch allObjects], kFSEventStreamEventIdSinceNow, latency, kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagIgnoreSelf);
+        FSEventStreamCreateFlags flags = kFSEventStreamCreateFlagUseCFTypes;
+#ifdef __MAC_OS_X_VERSION_MAX_ALLOWED
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
+        flags |= kFSEventStreamCreateFlagIgnoreSelf;
+#endif
+#endif
+		eventStream = FSEventStreamCreate(nil, &eventStreamCallBack, &context, (CFArrayRef)[self.pathsToWatch allObjects], kFSEventStreamEventIdSinceNow, latency, flags);
 		if (eventStream) {
 			CFRunLoopRef mainLoop = [[NSRunLoop currentRunLoop] getCFRunLoop];
 			FSEventStreamScheduleWithRunLoop(eventStream, mainLoop, kCFRunLoopDefaultMode);

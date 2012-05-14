@@ -27,6 +27,16 @@ typedef struct {
     int dupfd;
 } lpxttask_fd;
 
+static NSInteger compareFdArrayElements(id a, id b, void *context) 
+{
+    if([[a objectAtIndex:0] isLessThan:[b objectAtIndex:0]])
+        return NSOrderedAscending;
+    else if([[b objectAtIndex:0] isLessThan:[a objectAtIndex:0]])
+        return NSOrderedDescending;
+    else
+        return NSOrderedSame;
+}
+
 @interface LPXTTask ()
 
 - (void)inheritPipe:(NSPipe *)pipe mode:(int)mode dup:(int)dupfd name:(NSString *)name addIfExists:(BOOL)add;
@@ -154,14 +164,7 @@ static char *__BDSKCopyFileSystemRepresentation(NSString *str)
             k++;
         }
     }
-    [fdArray sortUsingComparator:^NSComparisonResult(id a, id b){
-        if([[a objectAtIndex:0] isLessThan:[b objectAtIndex:0]])
-            return NSOrderedAscending;
-        else if([[b objectAtIndex:0] isLessThan:[a objectAtIndex:0]])
-            return NSOrderedDescending;
-        else
-            return NSOrderedSame;
-    }];
+    [fdArray sortUsingFunction:&compareFdArrayElements context:nil];
     
     for(int i = 0; i < [fdArray count]; i++) {
         fds[i].fd = [[[fdArray objectAtIndex:i] objectAtIndex:0] intValue];
@@ -274,7 +277,10 @@ static char *__BDSKCopyFileSystemRepresentation(NSString *str)
 
 - (void)_performParentTask {
     if(_parentTask != nil) {
-        _parentTask();
+        NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+        [queue addOperation:_parentTask];
+        [queue waitUntilAllOperationsAreFinished];
+        [queue release];
     }
 }
 

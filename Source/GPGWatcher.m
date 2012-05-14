@@ -60,7 +60,15 @@
 				[changeDates setObject:date2 forKey:file];
 			} else {
 				// Set to any other date, because we can't set to nil.
+#ifdef __MAC_OS_X_VERSION_MAX_ALLOWED
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
 				[changeDates setObject:[date1 dateByAddingTimeInterval:-100000] forKey:file];
+#else
+				[changeDates setObject:[date1 addTimeInterval:-100000] forKey:file];
+#endif
+#else
+				[changeDates setObject:[date1 addTimeInterval:-100000] forKey:file];
+#endif
 			}
 			
 			lastFoundChange = [NSDate timeIntervalSinceReferenceDate];

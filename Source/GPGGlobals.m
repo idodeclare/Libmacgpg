@@ -221,13 +221,14 @@ break;
 
 @implementation NSSet (GPGExtension)
 - (NSSet *)usableGPGKeys {
+    NSMutableSet *result = [NSMutableSet set];
 	Class gpgKeyClass = [GPGKey class];
-	return [self objectsPassingTest:^BOOL(id obj, BOOL *stop) {
-		if ([obj isKindOfClass:gpgKeyClass] && [(GPGKey *)obj status] < GPGKeyStatus_Invalid) {
-			return YES;
+    for (id obj in self) {
+        if ([obj isKindOfClass:gpgKeyClass] && [(GPGKey *)obj status] < GPGKeyStatus_Invalid) {
+			[result addObject:obj];
 		}
-		return NO;
-	}];
+	};
+    return result;
 }
 @end
 
@@ -285,8 +286,7 @@ NSSet *fingerprintsFromStatusText(NSString *statusText) {
 	return [fingerprints count] ? fingerprints : nil;
 }
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED == MAC_OS_X_VERSION_10_6
-void *memmem(const void *big, size_t big_len, const void *little, size_t little_len) {
+void *gpgmemmem(const void *big, size_t big_len, const void *little, size_t little_len) {
 	if (little_len == 1) {
 		return memchr(big, *(const unsigned char *)little, big_len);
 	}	
@@ -318,7 +318,6 @@ void *memmem(const void *big, size_t big_len, const void *little, size_t little_
 	
 	return NULL;
 }
-#endif
 
 
 

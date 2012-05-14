@@ -19,8 +19,6 @@
 
 #import <Foundation/Foundation.h>
 
-typedef void (^lpxt_task_t)(void);
-
 @interface LPXTTask : NSObject {
     id _standardInput;
     id _standardOutput;
@@ -34,7 +32,7 @@ typedef void (^lpxt_task_t)(void);
     int _processIdentifier;
     int _terminationStatus;
     
-    lpxt_task_t _parentTask;
+    NSOperation *_parentTask;
 	
 	BOOL _cancelled;
 
@@ -60,7 +58,7 @@ typedef void (^lpxt_task_t)(void);
 @property (copy) NSString *currentDirectoryPath;
 @property (readonly) int processIdentifier;
 @property (readonly) int terminationStatus;
-@property (copy) lpxt_task_t parentTask;
+@property (retain) NSOperation *parentTask;
 @property (readonly) BOOL cancelled;
 
 - (void)cancel;
