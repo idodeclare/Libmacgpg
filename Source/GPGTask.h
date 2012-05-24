@@ -73,8 +73,6 @@
 
 	// I don't own, just a reference saved from GPGTaskOperation
 	NSOperationQueue *queue;
-	// safe to write without locking because only one thread writes
-	NSException *writeException;
 	NSInteger inDataLength;
 	NSInteger progressedLength;
 	NSMutableDictionary *progressedLengths;

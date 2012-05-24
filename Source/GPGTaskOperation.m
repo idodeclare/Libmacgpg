@@ -56,23 +56,25 @@
     // So in that case, the data actually has to be written as the very first thing.
     
     NSArray *options = [NSArray arrayWithObjects:@"--encrypt", @"--sign", @"--clearsign", @"--detach-sign", @"--symmetric", @"-e", @"-s", @"-b", @"-c", nil];
+
+    // threads will synchronize on the exContainer
+    NSMutableArray *exContainer = [NSMutableArray array];
     
     if([gpgTask.arguments firstObjectCommonWithArray:options] == nil) {
         [queue addOperation:[[[NSInvocationOperation alloc] 
-                              initWithTarget:parentTask selector:@selector(_writeInputData:) object:gpgTask] autorelease]];
+                              initWithTarget:parentTask selector:@selector(_writeInputData:) object:exContainer] autorelease]];
     }
     // Add each job to the collector group.
     [queue addOperation:[[[NSInvocationOperation alloc] 
-                          initWithTarget:parentTask selector:@selector(_readStdout:) object:nil] autorelease]];
+                          initWithTarget:parentTask selector:@selector(_readStdout:) object:exContainer] autorelease]];
     [queue addOperation:[[[NSInvocationOperation alloc] 
-                          initWithTarget:parentTask selector:@selector(_readStderr:) object:nil] autorelease]];
+                          initWithTarget:parentTask selector:@selector(_readStderr:) object:exContainer] autorelease]];
     if(parentTask.getAttributeData) {
         [queue addOperation:[[[NSInvocationOperation alloc] 
-                              initWithTarget:parentTask selector:@selector(_readAttributes:) object:nil] autorelease]];
+                              initWithTarget:parentTask selector:@selector(_readAttributes:) object:exContainer] autorelease]];
     }
     
     // Handle the status data. This is an important one.
-    NSMutableArray *exContainer = [NSMutableArray array];
     [queue addOperation:[[[NSInvocationOperation alloc] 
                           initWithTarget:parentTask selector:@selector(_handleStatus:) object:exContainer] autorelease]];
     
