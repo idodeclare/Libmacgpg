@@ -207,8 +207,9 @@ enum gpgStatusCodes {
 #define GPGDebugLog(...) {if ([GPGOptions debugLog]) NSLog(__VA_ARGS__);}
 #define GPG_SERVICE_NAME "GnuPG"
 
-extern NSString *GPGKeysChangedNotification;
-extern NSString *GPGOptionsChangedNotification;
+extern NSString * const GPGKeysChangedNotification;
+extern NSString * const GPGOptionsChangedNotification;
+extern NSString * const GPGConfigurationModifiedNotification;
 
 
 
@@ -278,4 +279,8 @@ void *gpgmemmem(const void *big, size_t big_len, const void *little, size_t litt
 - (id)init;
 @end
 
+// a little category to fcntl F_SETNOSIGPIPE on each fd
+@interface NSPipe (SetNoSIGPIPE)
+- (NSPipe *)noSIGPIPE;
+@end
 
