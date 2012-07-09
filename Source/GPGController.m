@@ -282,7 +282,8 @@ BOOL gpgConfigReaded = NO;
 		}
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		gpgTask.batchMode = YES;
 		[self addArgumentsForOptions];
 		[gpgTask addArgument:@"--list-secret-keys"];
@@ -302,7 +303,8 @@ BOOL gpgConfigReaded = NO;
 			searchStrings = [secKeyFingerprints allObjects];
 		}
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		if (withSigs) {
 			[gpgTask addArgument:@"--list-sigs"];
@@ -386,7 +388,8 @@ BOOL gpgConfigReaded = NO;
 		
 		
 		GPGTaskOrder *order = [GPGTaskOrder orderWithNoToAll];
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"];
@@ -417,8 +420,9 @@ BOOL gpgConfigReaded = NO;
 		}
 		
 		if ((mode & GPGSeparateSign) && (mode & GPGEncryptFlags)) {
-			// save object; processTo: will overwrite without releasing
+			// save object
 			GPGTask *tempTask = gpgTask;
+			gpgTask = nil;
 
 			// create new in-memory writeable stream
 			GPGMemoryStream *sigoutput = [GPGMemoryStream memoryStream];
@@ -491,7 +495,8 @@ BOOL gpgConfigReaded = NO;
             [input seekToBeginning];
         }
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		[gpgTask addInput:input];
@@ -540,7 +545,8 @@ BOOL gpgConfigReaded = NO;
             originalInput = [GPGMemoryStream memoryStreamForReading:originalData];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		[gpgTask addInput:signatureInput];
@@ -624,7 +630,8 @@ BOOL gpgConfigReaded = NO;
 		
 		[cmdText appendString:@"%commit\n"];
 		
-		gpgTask = [GPGTask gpgTaskWithArgument:@"--gen-key"];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTaskWithArgument:@"--gen-key"] retain];
 		[self addArgumentsForOptions];
 		gpgTask.batchMode = YES;
 		[gpgTask addInText:cmdText];
@@ -674,7 +681,8 @@ BOOL gpgConfigReaded = NO;
 		[self registerUndoForKeys:keys withName:@"Undo_Delete"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:[GPGTaskOrder orderWithYesToAll] forKey:@"order"]; 
 		
@@ -720,7 +728,8 @@ BOOL gpgConfigReaded = NO;
 		[self registerUndoForKey:key withName:@"Undo_CleanKey"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[gpgTask addArgument:@"--edit-key"];
 		[gpgTask addArgument:[key description]];
@@ -750,7 +759,8 @@ BOOL gpgConfigReaded = NO;
 		[self operationDidStart];
 		[self registerUndoForKey:key withName:@"Undo_MinimizeKey"];
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[gpgTask addArgument:@"--edit-key"];
 		[gpgTask addArgument:[key description]];
@@ -790,7 +800,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"\n" prompt:@"ask_revocation_reason.text" optional:YES];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"-a"];
@@ -860,7 +871,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -894,7 +906,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -936,7 +949,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:[NSString stringWithFormat:@"setpref %@\n", preferences] prompt:@"keyedit.prompt"];
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -965,7 +979,8 @@ BOOL gpgConfigReaded = NO;
 		[self operationDidStart];
 		//No undo for this operation.
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[gpgTask addArgument:@"--edit-key"];
 		[gpgTask addArgument:[key description]];
@@ -1001,7 +1016,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"quit\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -1057,7 +1073,8 @@ BOOL gpgConfigReaded = NO;
 		[self registerUndoForKeys:keys withName:@"Undo_Import"];
 		
 
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[gpgTask addInData:data];
 		[gpgTask addArgument:@"--import"];
@@ -1112,7 +1129,8 @@ BOOL gpgConfigReaded = NO;
 		}
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForComments];
 		[gpgTask addArguments:arguments];
@@ -1126,7 +1144,8 @@ BOOL gpgConfigReaded = NO;
 		
 		if (allowSec) {
 			[arguments replaceObjectAtIndex:0 withObject:@"--export-secret-keys"];
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			[self addArgumentsForComments];
 			[gpgTask addArguments:arguments];
@@ -1182,7 +1201,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		if (signKey) {
@@ -1239,7 +1259,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1299,7 +1320,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1343,7 +1365,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -1380,7 +1403,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"delkey\n" prompt:@"keyedit.prompt"];
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1428,7 +1452,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"\n" prompt:@"ask_revocation_reason.text" optional:YES];
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1471,7 +1496,8 @@ BOOL gpgConfigReaded = NO;
 		[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 		
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -1508,7 +1534,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"deluid\n" prompt:@"keyedit.prompt"];
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1556,7 +1583,8 @@ BOOL gpgConfigReaded = NO;
 			[order addCmd:@"\n" prompt:@"ask_revocation_reason.text" optional:YES];
 			[order addCmd:@"save\n" prompt:@"keyedit.prompt"];
 			
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 			[gpgTask addArgument:@"--edit-key"];
@@ -1591,7 +1619,8 @@ BOOL gpgConfigReaded = NO;
 		NSInteger uid = [self indexOfUserID:hashID fromKey:key];
 		
 		if (uid > 0) {
-			gpgTask = [GPGTask gpgTask];
+			[gpgTask release];
+			gpgTask = [[GPGTask gpgTask] retain];
 			[self addArgumentsForOptions];
 			[gpgTask addArgument:@"--edit-key"];
 			[gpgTask addArgument:[key description]];
@@ -1629,7 +1658,8 @@ BOOL gpgConfigReaded = NO;
 		
 		[order addCmd:path prompt:@"photoid.jpeg.add"];
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.userInfo = [NSDictionary dictionaryWithObject:order forKey:@"order"]; 
 		[gpgTask addArgument:@"--edit-key"];
@@ -1663,7 +1693,8 @@ BOOL gpgConfigReaded = NO;
 		[self operationDidStart];
 		[self registerUndoForKeys:keys withName:@"Undo_RefreshFromServer"];
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		[gpgTask addArgument:@"--refresh-keys"];
@@ -1699,7 +1730,8 @@ BOOL gpgConfigReaded = NO;
 		if ([keys count] == 0) {
 			[NSException raise:NSInvalidArgumentException format:@"Empty key list!"];
 		}
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		[gpgTask addArgument:@"--recv-keys"];
@@ -1736,7 +1768,8 @@ BOOL gpgConfigReaded = NO;
 		if ([keys count] == 0) {
 			[NSException raise:NSInvalidArgumentException format:@"Empty key list!"];
 		}
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		[self addArgumentsForKeyserver];
 		[gpgTask addArgument:@"--send-keys"];
@@ -1765,7 +1798,8 @@ BOOL gpgConfigReaded = NO;
 	@try {
 		[self operationDidStart];
 		
-		gpgTask = [GPGTask gpgTask];
+		[gpgTask release];
+		gpgTask = [[GPGTask gpgTask] retain];
 		[self addArgumentsForOptions];
 		gpgTask.batchMode = YES;
 		[self addArgumentsForKeyserver];
@@ -1858,7 +1892,8 @@ BOOL gpgConfigReaded = NO;
 }
 
 - (NSInteger)indexOfUserID:(NSString *)hashID fromKey:(NSObject <KeyFingerprint> *)key {
-	gpgTask = [GPGTask gpgTask];
+	[gpgTask release];
+	gpgTask = [[GPGTask gpgTask] retain];
 	[self addArgumentsForOptions];
 	[gpgTask addArgument:@"-k"];
 	[gpgTask addArgument:[key description]];
@@ -1885,7 +1920,8 @@ BOOL gpgConfigReaded = NO;
 }
 
 - (NSInteger)indexOfSubkey:(NSObject <KeyFingerprint> *)subkey fromKey:(NSObject <KeyFingerprint> *)key {
-	gpgTask = [GPGTask gpgTask];
+	[gpgTask release];
+	gpgTask = [[GPGTask gpgTask] retain];
 	[self addArgumentsForOptions];
 	[gpgTask addArgument:@"-k"];
 	[gpgTask addArgument:@"--with-fingerprint"];
@@ -2230,7 +2266,9 @@ BOOL gpgConfigReaded = NO;
 }
 - (void)registerUndoForKeys:(NSObject <EnumerationList> *)keys {
 	GPGTask *oldGPGTask = gpgTask;
+	gpgTask = nil;
 	[[undoManager prepareWithInvocationTarget:self] restoreKeys:keys withData:[self exportKeys:keys allowSecret:YES fullExport:YES]];
+	[gpgTask release];
 	gpgTask = oldGPGTask;
 }
 
@@ -2350,7 +2388,7 @@ BOOL gpgConfigReaded = NO;
 	self.lastSignature = nil;
 	[asyncProxy release];
 	[identifier release];
-	
+	[gpgTask release];
 	[super dealloc];
 }
 
